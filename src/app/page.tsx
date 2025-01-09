@@ -202,7 +202,7 @@ const Home: FC = () => {
           </div>
         </CardContent>
       </Card>
-      {currentRow >= data.length && stats.weird > 0 && (
+      {stats.weird > 0 && (
         <div className='mt-8'>
           <Card className='max-w-2xl mx-auto'>
             <CardHeader>
