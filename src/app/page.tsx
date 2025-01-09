@@ -272,6 +272,7 @@ const DataRow: FC<DataRowProps> = ({
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === ' ') {
+      e.preventDefault();
       onMark('ok', 'forward');
     } else if (e.key === 'w') {
       onMark('weird', 'forward');
