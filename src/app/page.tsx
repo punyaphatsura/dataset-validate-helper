@@ -274,7 +274,7 @@ const DataRow: FC<DataRowProps> = ({
     if (e.key === ' ') {
       e.preventDefault();
       onMark('ok', 'forward');
-    } else if (e.key === 'w') {
+    } else if (e.key === 'w' || e.key === 'ว') {
       onMark('weird', 'forward');
     } else if (e.key === 'ArrowRight') {
       onMark('skip', 'forward');
