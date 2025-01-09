@@ -162,9 +162,11 @@ const Home: FC = () => {
             </div>
 
             <div className='space-y-2'>
-              <p className='text-gray-500 text-sm font-normal '>
-                {currentRow + 1} / {data.length}
-              </p>
+              {data.length > 0 && (
+                <p className='text-gray-500 text-sm font-normal '>
+                  {currentRow + 1} / {data.length}
+                </p>
+              )}
               <div className='flex justify-between text-sm text-gray-600'>
                 <span>Progress: {progress}%</span>
                 <span>Remaining: {data.length - currentRow}</span>
