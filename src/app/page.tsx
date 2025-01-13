@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, FC } from 'react';
+import { useState, useEffect, FC, useRef } from 'react';
 import { parseCsvFile } from '../utils/parseCsv';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -121,6 +121,41 @@ const Home: FC = () => {
     }
   };
 
+  const downloadProgress = () => {
+    const savedProgress = localStorage.getItem('validationProgress');
+    if (savedProgress) {
+      const blob = new Blob([savedProgress], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'validationProgress.txt';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  };
+
+  const handleUploadProgress = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    if (e.target.files && e.target.files[0]) {
+      setLoading(true);
+      setError('');
+      try {
+        const file = e.target.files[0];
+        const text = await file.text();
+        const progress = JSON.parse(text);
+        setCurrentRow(progress.currentRow);
+        setStats(progress.stats);
+        setHistory(progress.history);
+      } catch (error) {
+        setError('Error parsing progress file. Please make sure it is valid.');
+        console.error('Error parsing progress file:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
   return (
     <div className='min-h-screen bg-gray-50 p-8'>
       <Card className='max-w-2xl mx-auto'>
@@ -160,34 +195,54 @@ const Home: FC = () => {
                 </Alert>
               )}
             </div>
+            {data.length > 0 && (
+              <>
+                <div className='space-y-2'>
+                  <h3 className='text-base font-semibold'>Progress</h3>
+                  <div className='flex gap-4'>
+                    <button
+                      onClick={downloadProgress}
+                      className='text-sm px-3 py-2 font-semibold bg-green-100 text-green-800 rounded-md 
+              hover:bg-green-200 transition-colors'>
+                      Download Progress
+                    </button>
+                    <FileUploadButton
+                      onChange={handleUploadProgress}
+                      buttonText='Upload Progress'
+                      id='upload-progress'
+                    />
+                  </div>
+                </div>
 
-            <div className='space-y-2'>
-              {data.length > 0 && (
-                <p className='text-gray-500 text-sm font-normal '>
-                  {currentRow + 1} / {data.length}
-                </p>
-              )}
-              <div className='flex justify-between text-sm text-gray-600'>
-                <span>Progress: {progress}%</span>
-                <span>Remaining: {data.length - currentRow}</span>
-              </div>
-              <Progress value={progress} className='w-full' />
+                <div className='space-y-2'>
+                  {data.length > 0 && (
+                    <p className='text-gray-500 text-sm font-normal '>
+                      {currentRow + 1} / {data.length}
+                    </p>
+                  )}
+                  <div className='flex justify-between text-sm text-gray-600'>
+                    <span>Progress: {progress}%</span>
+                    <span>Remaining: {data.length - currentRow}</span>
+                  </div>
+                  <Progress value={progress} className='w-full' />
 
-              <div className='grid grid-cols-3 gap-4 mt-4'>
-                <div className='flex items-center gap-2 text-green-600'>
-                  <Check className='w-4 h-4' />
-                  Ok: {stats.ok}
+                  <div className='grid grid-cols-3 gap-4 mt-4'>
+                    <div className='flex items-center gap-2 text-green-600'>
+                      <Check className='w-4 h-4' />
+                      Ok: {stats.ok}
+                    </div>
+                    <div className='flex items-center gap-2 text-red-600'>
+                      <X className='w-4 h-4' />
+                      Weird: {stats.weird}
+                    </div>
+                    <div className='flex items-center gap-2 text-gray-600'>
+                      <SkipForward className='w-4 h-4' />
+                      Skipped: {stats.skip}
+                    </div>
+                  </div>
                 </div>
-                <div className='flex items-center gap-2 text-red-600'>
-                  <X className='w-4 h-4' />
-                  Weird: {stats.weird}
-                </div>
-                <div className='flex items-center gap-2 text-gray-600'>
-                  <SkipForward className='w-4 h-4' />
-                  Skipped: {stats.skip}
-                </div>
-              </div>
-            </div>
+              </>
+            )}
 
             {loading ? (
               <div className='text-center py-8'>Loading...</div>
@@ -207,7 +262,7 @@ const Home: FC = () => {
           </div>
         </CardContent>
       </Card>
-      {stats.weird > 0 && (
+      {data.length > 0 && stats.weird > 0 && (
         <div className='mt-8'>
           <Card className='max-w-2xl mx-auto'>
             <CardHeader>
@@ -327,6 +382,45 @@ const DataRow: FC<DataRowProps> = ({
           </div>
         </div>
       </div>
+    </div>
+  );
+};
+
+interface FileUploadButtonProps {
+  id: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  className?: string;
+  buttonText: string;
+}
+
+const FileUploadButton: FC<FileUploadButtonProps> = ({
+  id,
+  onChange,
+  buttonText,
+}) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleClick = () => {
+    if (!fileInputRef.current) return;
+    fileInputRef.current.click();
+  };
+
+  return (
+    <div className='relative'>
+      <input
+        ref={fileInputRef}
+        id={id}
+        type='file'
+        accept='.txt'
+        onChange={onChange}
+        className='hidden'
+      />
+      <button
+        onClick={handleClick}
+        className='text-sm px-4 py-2 bg-blue-50 text-blue-700 rounded-md 
+                 hover:bg-blue-100 transition-colors font-semibold'>
+        {buttonText}
+      </button>
     </div>
   );
 };
