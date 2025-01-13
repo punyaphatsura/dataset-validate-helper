@@ -147,6 +147,7 @@ const Home: FC = () => {
         setCurrentRow(progress.currentRow);
         setStats(progress.stats);
         setHistory(progress.history);
+        localStorage.setItem('validationProgress', text);
       } catch (error) {
         setError('Error parsing progress file. Please make sure it is valid.');
         console.error('Error parsing progress file:', error);
