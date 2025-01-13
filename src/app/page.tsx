@@ -276,14 +276,17 @@ const DataRow: FC<DataRowProps> = ({
   }, []);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    e.preventDefault();
     if (e.key === ' ') {
+      e.preventDefault();
       onMark('ok', 'forward');
     } else if (e.key === 'w' || e.key === 'ว') {
+      e.preventDefault();
       onMark('weird', 'forward');
     } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
       onMark('skip', 'forward');
     } else if (e.key === 'ArrowLeft' && canGoBack) {
+      e.preventDefault();
       onMark('skip', 'back');
     }
   };
