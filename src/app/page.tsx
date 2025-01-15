@@ -335,7 +335,7 @@ const DataRow: FC<DataRowProps> = ({
     if (e.key === ' ') {
       e.preventDefault();
       onMark('ok', 'forward');
-    } else if (e.key === 'w' || e.key === 'ว') {
+    } else if (e.key === 'w' || e.key === 'ไ') {
       e.preventDefault();
       onMark('weird', 'forward');
     } else if (e.key === 'ArrowRight') {
