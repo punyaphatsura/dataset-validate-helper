@@ -5,7 +5,21 @@ interface DataRow {
   'english sentence': string;
 }
 
+export class FileData {
+  static fileName: string;
+
+  static getFileName(): string {
+    return this.fileName;
+  }
+
+  static setFileName(name: string): void {
+    this.fileName = name;
+  }
+}
+
 export const parseCsvFile = (file: File): Promise<DataRow[]> => {
+  const fileName = file.name;
+  FileData.setFileName(fileName);
   return new Promise((resolve, reject) => {
     Papa.parse(file, {
       header: true,

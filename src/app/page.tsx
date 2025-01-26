@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, FC, useRef } from 'react';
-import { parseCsvFile } from '../utils/parseCsv';
+import { FileData, parseCsvFile } from '../utils/parseCsv';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -34,21 +34,38 @@ const Home: FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
   const [history, setHistory] = useState<ValidationHistory[]>([]);
+  const [isInit, setIsInit] = useState<boolean>(true);
 
   useEffect(() => {
-    const savedProgress = localStorage.getItem('validationProgress');
+    if (data.length === 0) return;
+    clearProgress();
+    const savedProgress = localStorage.getItem(
+      `validationProgress-${FileData.getFileName()}`
+    );
     if (savedProgress) {
       const { currentRow, stats, history } = JSON.parse(savedProgress);
       setCurrentRow(currentRow);
       setStats(stats);
       setHistory(history || []);
+      setIsInit(false);
+    } else {
+      localStorage.setItem(
+        `validationProgress-${FileData.getFileName()}`,
+        JSON.stringify({
+          currentRow,
+          stats,
+          history,
+        })
+      );
+      setIsInit(false);
     }
-  }, []);
+  }, [data]);
 
   useEffect(() => {
+    if (isInit) return;
     if (data.length > 0) {
       localStorage.setItem(
-        'validationProgress',
+        `validationProgress-${FileData.getFileName()}`,
         JSON.stringify({
           currentRow,
           stats,
@@ -78,6 +95,12 @@ const Home: FC = () => {
         setLoading(false);
       }
     }
+  };
+
+  const clearProgress = () => {
+    setCurrentRow(0);
+    setStats({ weird: 0, ok: 0, skip: 0 });
+    setHistory([]);
   };
 
   const handleMark = (
@@ -117,18 +140,20 @@ const Home: FC = () => {
       setCurrentRow(0);
       setStats({ weird: 0, ok: 0, skip: 0 });
       setHistory([]);
-      localStorage.removeItem('validationProgress');
+      localStorage.removeItem(`validationProgress-${FileData.getFileName()}`);
     }
   };
 
   const downloadProgress = () => {
-    const savedProgress = localStorage.getItem('validationProgress');
+    const savedProgress = localStorage.getItem(
+      `validationProgress-${FileData.getFileName()}`
+    );
     if (savedProgress) {
       const blob = new Blob([savedProgress], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'validationProgress.txt';
+      a.download = `validationProgress-${FileData.getFileName()}.txt`;
       a.click();
       URL.revokeObjectURL(url);
     }
@@ -147,7 +172,10 @@ const Home: FC = () => {
         setCurrentRow(progress.currentRow);
         setStats(progress.stats);
         setHistory(progress.history);
-        localStorage.setItem('validationProgress', text);
+        localStorage.setItem(
+          `validationProgress-${FileData.getFileName()}`,
+          text
+        );
       } catch (error) {
         setError('Error parsing progress file. Please make sure it is valid.');
         console.error('Error parsing progress file:', error);
@@ -217,8 +245,8 @@ const Home: FC = () => {
 
                 <div className='space-y-2'>
                   {data.length > 0 && (
-                    <p className='text-gray-500 text-sm font-normal '>
-                      {currentRow + 1} / {data.length}
+                    <p className='text-gray-500 text-sm font-norma'>
+                      {Math.min(data.length, currentRow + 1)} / {data.length}
                     </p>
                   )}
                   <div className='flex justify-between text-sm text-gray-600'>
@@ -247,19 +275,26 @@ const Home: FC = () => {
 
             {loading ? (
               <div className='text-center py-8'>Loading...</div>
-            ) : currentRow < data.length ? (
-              <DataRow
-                rowNumber={currentRow + 1}
-                thaiText={data[currentRow]['thai sentence']}
-                englishText={data[currentRow]['english sentence']}
-                onMark={handleMark}
-                canGoBack={history.length > 0}
-              />
-            ) : data.length > 0 ? (
-              <div className='text-center py-8 text-green-600'>
-                All rows processed! 🎉
-              </div>
-            ) : null}
+            ) : (
+              data.length > 0 && (
+                <DataRow
+                  rowNumber={currentRow + 1}
+                  thaiText={
+                    data[currentRow]
+                      ? data[currentRow]['thai sentence']
+                      : undefined
+                  }
+                  englishText={
+                    data[currentRow]
+                      ? data[currentRow]['english sentence']
+                      : undefined
+                  }
+                  onMark={handleMark}
+                  canGoBack={history.length > 0}
+                  dataLength={data.length}
+                />
+              )
+            )}
           </div>
         </CardContent>
       </Card>
@@ -308,13 +343,14 @@ export default Home;
 
 interface DataRowProps {
   rowNumber: number;
-  thaiText: string;
-  englishText: string;
+  thaiText?: string;
+  englishText?: string;
   onMark: (
     mark: 'weird' | 'ok' | 'skip',
     direction?: 'forward' | 'back'
   ) => void;
   canGoBack: boolean;
+  dataLength: number;
 }
 
 const DataRow: FC<DataRowProps> = ({
@@ -323,6 +359,7 @@ const DataRow: FC<DataRowProps> = ({
   englishText,
   onMark,
   canGoBack,
+  dataLength,
 }) => {
   useEffect(() => {
     const element = document.getElementById('data-row');
@@ -347,43 +384,57 @@ const DataRow: FC<DataRowProps> = ({
     }
   };
 
-  return (
-    <div
-      id='data-row'
-      tabIndex={0}
-      onKeyDown={handleKeyDown}
-      className={`p-6 border rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 `}>
-      <div className='space-y-4'>
-        <div className='flex justify-between items-center'>
-          <span className='font-medium text-gray-600'>Row {rowNumber}</span>
-          <div className='text-sm text-gray-500'>
-            Press <kbd className='px-2 py-1 bg-gray-100 rounded'>Space</kbd> for
-            OK,
-            <kbd className='px-2 py-1 bg-gray-100 rounded ml-1'>W</kbd> for
-            Weird,
-            <kbd className='px-2 py-1 bg-gray-100 rounded ml-1'>→</kbd> to Skip
-            {canGoBack && (
-              <>
-                , <kbd className='px-2 py-1 bg-gray-100 rounded ml-1'>←</kbd> to
-                Go Back
-              </>
-            )}
+  return rowNumber - 1 >= dataLength ? (
+    <div className='flex flex-col gap-4'>
+      <div className='text-center text-green-600'>All rows processed! 🎉</div>
+      <button
+        className='text-sm px-3 py-2 font-semibold bg-slate-100 text-slate-700 rounded-md hover:bg-slate-200 transition-colors'
+        onClick={() => {
+          onMark('skip', 'back');
+        }}>
+        Back
+      </button>
+    </div>
+  ) : (
+    thaiText && englishText && (
+      <div
+        id='data-row'
+        tabIndex={0}
+        onKeyDown={handleKeyDown}
+        className={`p-6 border rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 `}>
+        <div className='space-y-4'>
+          <div className='flex justify-between items-center'>
+            <span className='font-medium text-gray-600'>Row {rowNumber}</span>
+            <div className='text-sm text-gray-500'>
+              Press <kbd className='px-2 py-1 bg-gray-100 rounded'>Space</kbd>{' '}
+              for OK,
+              <kbd className='px-2 py-1 bg-gray-100 rounded ml-1'>W</kbd> for
+              Weird,
+              <kbd className='px-2 py-1 bg-gray-100 rounded ml-1'>→</kbd> to
+              Skip
+              {canGoBack && (
+                <>
+                  , <kbd className='px-2 py-1 bg-gray-100 rounded ml-1'>←</kbd>{' '}
+                  to Go Back
+                </>
+              )}
+            </div>
           </div>
-        </div>
 
-        <div className='space-y-2'>
-          <div className='p-3 bg-gray-50 rounded'>
-            <div className='text-sm text-gray-500 mb-1'>Thai</div>
-            <div className='text-lg'>{thaiText}</div>
-          </div>
+          <div className='space-y-2'>
+            <div className='p-3 bg-gray-50 rounded'>
+              <div className='text-sm text-gray-500 mb-1'>Thai</div>
+              <div className='text-lg'>{thaiText}</div>
+            </div>
 
-          <div className='p-3 bg-gray-50 rounded'>
-            <div className='text-sm text-gray-500 mb-1'>English</div>
-            <div className='text-lg'>{englishText}</div>
+            <div className='p-3 bg-gray-50 rounded'>
+              <div className='text-sm text-gray-500 mb-1'>English</div>
+              <div className='text-lg'>{englishText}</div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    )
   );
 };
 
