@@ -40,7 +40,7 @@ const Home: FC = () => {
     if (data.length === 0) return;
     clearProgress();
     const savedProgress = localStorage.getItem(
-      `validationProgress-${FileData.getFileName()}`
+      `validationProgress-${FileData.getFileName().split('.')[0]}`
     );
     if (savedProgress) {
       const { currentRow, stats, history } = JSON.parse(savedProgress);
@@ -50,7 +50,7 @@ const Home: FC = () => {
       setIsInit(false);
     } else {
       localStorage.setItem(
-        `validationProgress-${FileData.getFileName()}`,
+        `validationProgress-${FileData.getFileName().split('.')[0]}`,
         JSON.stringify({
           currentRow,
           stats,
@@ -65,7 +65,7 @@ const Home: FC = () => {
     if (isInit) return;
     if (data.length > 0) {
       localStorage.setItem(
-        `validationProgress-${FileData.getFileName()}`,
+        `validationProgress-${FileData.getFileName().split('.')[0]}`,
         JSON.stringify({
           currentRow,
           stats,
@@ -140,20 +140,24 @@ const Home: FC = () => {
       setCurrentRow(0);
       setStats({ weird: 0, ok: 0, skip: 0 });
       setHistory([]);
-      localStorage.removeItem(`validationProgress-${FileData.getFileName()}`);
+      localStorage.removeItem(
+        `validationProgress-${FileData.getFileName().split('.')[0]}`
+      );
     }
   };
 
   const downloadProgress = () => {
     const savedProgress = localStorage.getItem(
-      `validationProgress-${FileData.getFileName()}`
+      `validationProgress-${FileData.getFileName().split('.')[0]}`
     );
     if (savedProgress) {
       const blob = new Blob([savedProgress], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `validationProgress-${FileData.getFileName()}.txt`;
+      a.download = `validationProgress-${
+        FileData.getFileName().split('.')[0]
+      }.txt`;
       a.click();
       URL.revokeObjectURL(url);
     }
@@ -173,7 +177,7 @@ const Home: FC = () => {
         setStats(progress.stats);
         setHistory(progress.history);
         localStorage.setItem(
-          `validationProgress-${FileData.getFileName()}`,
+          `validationProgress-${FileData.getFileName().split('.')[0]}`,
           text
         );
       } catch (error) {
