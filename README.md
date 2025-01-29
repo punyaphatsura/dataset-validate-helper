@@ -2,30 +2,17 @@
 
 This repository contains two main modules:
 
-## 1. ValidationHelper
+## [1. ValidationHelper](https://github.com/dubbing-ai/DatasetValidationHelper/tree/main/ValidationHelper)
 
-A web-based tool designed to assist with dataset validation through an intuitive UI. Built with:
+A web-based tool designed to assist with dataset validation through an intuitive UI.
 
-- **Next.js** – for server-side rendering and performance
-- **Tailwind CSS** – for flexible and modern styling
-- **ShadCN** – for pre-styled UI components
+Read Full Doc [Here](https://github.com/dubbing-ai/DatasetValidationHelper/blob/main/ValidationHelper/README.md)
 
-### Features:
-
-- CSV file upload and parsing
-- Keyboard shortcuts for quick validation
-- Tracks progress and allows resuming validation
-- Supports exporting and importing validation history
-
-## 2. DataSpliter
+## [2. DataSpliter](https://github.com/dubbing-ai/DatasetValidationHelper/tree/main/DataSpliter)
 
 A Python script for categorizing dataset entries into:
 
 - **Good Data** – entries marked as valid
 - **Weird Data** – entries flagged for issues
 
-### How it Works:
-
-- Reads a dataset (CSV format)
-- Uses the **progress file downloaded from ValidationHelper** to determine categorized data
-- Saves the categorized data into separate files
+Read Full Doc [Here](https://github.com/dubbing-ai/DatasetValidationHelper/blob/main/DataSpliter/README.md)
