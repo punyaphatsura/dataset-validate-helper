@@ -1,27 +1,13 @@
 'use client';
-import { useState, useEffect, FC, useRef } from 'react';
-import { FileData, parseCsvFile } from '../utils/parseCsv';
+import { useState, useEffect, FC } from 'react';
+import { DataRowType, FileData, parseCsvFile } from '@/utils/parseCsv';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Upload, Check, X, SkipForward } from 'lucide-react';
-
-interface DataRowType {
-  'thai sentence': string;
-  'english sentence': string;
-}
-
-interface ValidationStats {
-  weird: number;
-  ok: number;
-  skip: number;
-}
-
-// Add interface for validation history
-interface ValidationHistory {
-  rowIndex: number;
-  mark: 'weird' | 'ok' | 'skip';
-}
+import FileUploadButton from '@/components/FileUploadButton';
+import DataRow from '@/components/DataRow';
+import { ValidationStats, ValidationHistory } from '@/types/validation';
 
 const Home: FC = () => {
   const [data, setData] = useState<DataRowType[]>([]);
@@ -75,6 +61,29 @@ const Home: FC = () => {
     }
   }, [currentRow, stats, history, data]);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === ' ') {
+        e.preventDefault();
+        handleMark('ok', 'forward');
+      } else if (e.key === 'w' || e.key === 'ไ') {
+        e.preventDefault();
+        handleMark('weird', 'forward');
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        handleMark('skip', 'forward');
+      } else if (e.key === 'ArrowLeft' && history.length > 0) {
+        e.preventDefault();
+        handleMark('skip', 'back');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [currentRow, history]);
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setLoading(true);
@@ -82,10 +91,6 @@ const Home: FC = () => {
       try {
         const parsedData = await parseCsvFile(e.target.files[0]);
         setData(parsedData);
-        // setCurrentRow(0);
-        // setStats({ weird: 0, ok: 0, skip: 0 });
-        // setHistory([]);
-        // localStorage.removeItem('validationProgress');
       } catch (error) {
         setError(
           "Error parsing CSV file. Please make sure it's properly formatted."
@@ -104,7 +109,7 @@ const Home: FC = () => {
   };
 
   const handleMark = (
-    mark: 'weird' | 'ok' | 'skip',
+    mark: ValidationHistory['mark'],
     direction: 'forward' | 'back' = 'forward'
   ) => {
     if (direction === 'forward') {
@@ -211,16 +216,12 @@ const Home: FC = () => {
         <CardContent>
           <div className='space-y-6'>
             <div className='flex flex-col gap-2'>
-              <input
-                type='file'
-                accept='.csv'
+              <FileUploadButton
                 onChange={handleFileUpload}
-                className='block w-full text-sm text-gray-500
-                  file:mr-4 file:py-2 file:px-4
-                  file:rounded-md file:border-0
-                  file:text-sm file:font-semibold
-                  file:bg-blue-50 file:text-blue-700
-                  hover:file:bg-blue-100'
+                buttonText='Upload Dataset File'
+                id='upload-file'
+                accept='.csv'
+                showFileName
               />
               {error && (
                 <Alert variant='destructive'>
@@ -293,7 +294,7 @@ const Home: FC = () => {
                       ? data[currentRow]['english sentence']
                       : undefined
                   }
-                  onMark={handleMark}
+                  onBack={() => handleMark('skip', 'back')}
                   canGoBack={history.length > 0}
                   dataLength={data.length}
                 />
@@ -344,139 +345,3 @@ const Home: FC = () => {
 };
 
 export default Home;
-
-interface DataRowProps {
-  rowNumber: number;
-  thaiText?: string;
-  englishText?: string;
-  onMark: (
-    mark: 'weird' | 'ok' | 'skip',
-    direction?: 'forward' | 'back'
-  ) => void;
-  canGoBack: boolean;
-  dataLength: number;
-}
-
-const DataRow: FC<DataRowProps> = ({
-  rowNumber,
-  thaiText,
-  englishText,
-  onMark,
-  canGoBack,
-  dataLength,
-}) => {
-  useEffect(() => {
-    const element = document.getElementById('data-row');
-    if (element) {
-      element.focus();
-    }
-  }, []);
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === ' ') {
-      e.preventDefault();
-      onMark('ok', 'forward');
-    } else if (e.key === 'w' || e.key === 'ไ') {
-      e.preventDefault();
-      onMark('weird', 'forward');
-    } else if (e.key === 'ArrowRight') {
-      e.preventDefault();
-      onMark('skip', 'forward');
-    } else if (e.key === 'ArrowLeft' && canGoBack) {
-      e.preventDefault();
-      onMark('skip', 'back');
-    }
-  };
-
-  return rowNumber - 1 >= dataLength ? (
-    <div className='flex flex-col gap-4'>
-      <div className='text-center text-green-600'>All rows processed! 🎉</div>
-      <button
-        className='text-sm px-3 py-2 font-semibold bg-slate-100 text-slate-700 rounded-md hover:bg-slate-200 transition-colors'
-        onClick={() => {
-          onMark('skip', 'back');
-        }}>
-        Back
-      </button>
-    </div>
-  ) : (
-    thaiText && englishText && (
-      <div
-        id='data-row'
-        tabIndex={0}
-        onKeyDown={handleKeyDown}
-        className={`p-6 border rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 `}>
-        <div className='space-y-4'>
-          <div className='flex justify-between items-center'>
-            <span className='font-medium text-gray-600'>Row {rowNumber}</span>
-            <div className='text-sm text-gray-500'>
-              Press <kbd className='px-2 py-1 bg-gray-100 rounded'>Space</kbd>{' '}
-              for OK,
-              <kbd className='px-2 py-1 bg-gray-100 rounded ml-1'>W</kbd> for
-              Weird,
-              <kbd className='px-2 py-1 bg-gray-100 rounded ml-1'>→</kbd> to
-              Skip
-              {canGoBack && (
-                <>
-                  , <kbd className='px-2 py-1 bg-gray-100 rounded ml-1'>←</kbd>{' '}
-                  to Go Back
-                </>
-              )}
-            </div>
-          </div>
-
-          <div className='space-y-2'>
-            <div className='p-3 bg-gray-50 rounded'>
-              <div className='text-sm text-gray-500 mb-1'>Thai</div>
-              <div className='text-lg'>{thaiText}</div>
-            </div>
-
-            <div className='p-3 bg-gray-50 rounded'>
-              <div className='text-sm text-gray-500 mb-1'>English</div>
-              <div className='text-lg'>{englishText}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  );
-};
-
-interface FileUploadButtonProps {
-  id: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  className?: string;
-  buttonText: string;
-}
-
-const FileUploadButton: FC<FileUploadButtonProps> = ({
-  id,
-  onChange,
-  buttonText,
-}) => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleClick = () => {
-    if (!fileInputRef.current) return;
-    fileInputRef.current.click();
-  };
-
-  return (
-    <div className='relative'>
-      <input
-        ref={fileInputRef}
-        id={id}
-        type='file'
-        accept='.txt'
-        onChange={onChange}
-        className='hidden'
-      />
-      <button
-        onClick={handleClick}
-        className='text-sm px-4 py-2 bg-blue-50 text-blue-700 rounded-md 
-                 hover:bg-blue-100 transition-colors font-semibold'>
-        {buttonText}
-      </button>
-    </div>
-  );
-};

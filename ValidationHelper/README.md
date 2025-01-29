@@ -1,36 +1,84 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Dataset Validation Helper
 
-## Getting Started
+[![Deploy](https://img.shields.io/badge/deploy_in-vercel-blue)](https://dataset-validate-helper.vercel.app/)
 
-First, run the development server:
+## About The Project
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+Dataset Validation Helper is a tool designed to assist users in validating datasets by providing an intuitive interface for reviewing and marking data entries. This project is particularly useful for manually validating machine learning datasets.
+
+## Tech Stack
+
+- **Package Manager**: Bun
+- **Frontend**: Next.js, React, TypeScript
+- **Styling**: TailwindCSS
+- **UI Components**: ShadCN, Radix UI
+- **Parsing**: PapaParse
+
+## Structure
+
+```
+├── public/
+│   ├── file.svg
+│   ├── globe.svg
+│   ├── next.svg
+│   ├── vercel.svg
+│   └── window.svg
+├── src/
+│   ├── app/
+│   │   └── page.tsx       # Homepage
+│   ├── components/
+│   │   ├── ui/            # ShadCN Components
+│   │   ├── DataRow.tsx
+│   │   └── FileUploadButton.tsx
+│   ├── lib/
+│   │   └── utils.ts       # Utility functions
+│   ├── types/
+│   │   └── validation.ts  # Type
+│   ├── utils/
+│   │   └── parseCsv.ts    # CSV parsing utility
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Features
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Upload and parse CSV files
+- Validate dataset entries manually
+- Save and load validation progress
+- User-friendly UI with keyboard shortcuts for efficient marking
+- Export validation progress for send the progress to other user or using in **DataSpliter**
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### How to Use the Web
 
-## Learn More
+1. **Import the dataset**: Upload a CSV file to begin the validation process.
+   - CSV field header must be `thai sentence,english sentence`
+2. **Mark the data**:
+   - Press `Space` to mark data as **Good**.
+   - Press `W` to mark data as **Weird**.
+   - Press `<-` to **undo** the last action.
+   - Press `->` to **skip** the current entry.
+3. **Auto-save progress**: The progress is automatically saved in local storage using the dataset filename as the key. If the dataset filename changes, the history will not load. If you upload the dataset file and the progress for that dataset exists, it will automatically load the progress to allow you to continue where you left off.
+4. **Download & Share Progress**: You can download your progress and share it with other users, allowing them to continue from where you left off. The saved progress can also be used in **DataSpliter** for further processing.
+5. **Reset Progress**: You can reset the progress (current file) by pressing reset progress button.
 
-To learn more about Next.js, take a look at the following resources:
+## Screenshots
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Landing Page
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+![alt text](public/screenshots/image.png)
 
-## Deploy on Vercel
+### Uploaded Data
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+![alt text](public/screenshots/image2.png)
+![alt text](public/screenshots/image3.png)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Wried Data Preview
+
+![alt text](public/screenshots/image4.png)
+
+### Validation Finised
+
+![alt text](public/screenshots/image5.png)
+
+## Notes
+
+- Ensure the uploaded CSV file is correctly formatted.
+- Progress is saved in your browser's local storage using the dataset filename as the key, tied to your browser profile and device. Switching devices or clearing cache may result in data loss. To prevent this, exporting progress for backup is recommended.

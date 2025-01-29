@@ -1,6 +1,6 @@
 import Papa from 'papaparse';
 
-interface DataRow {
+export interface DataRowType {
   'thai sentence': string;
   'english sentence': string;
 }
@@ -17,7 +17,7 @@ export class FileData {
   }
 }
 
-export const parseCsvFile = (file: File): Promise<DataRow[]> => {
+export const parseCsvFile = (file: File): Promise<DataRowType[]> => {
   const fileName = file.name;
   FileData.setFileName(fileName);
   return new Promise((resolve, reject) => {
@@ -38,7 +38,7 @@ export const parseCsvFile = (file: File): Promise<DataRow[]> => {
           const rowError = result.errors.find((error) => error.row === index);
           return !rowError || rowError.type !== 'FieldMismatch';
         });
-        resolve(validData as DataRow[]);
+        resolve(validData as DataRowType[]);
       },
     });
   });
