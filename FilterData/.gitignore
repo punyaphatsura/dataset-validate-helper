@@ -1,0 +1,3 @@
+progress/validationProgress-*.txt
+data/filtered/**/*.csv
+data/raw/**/*.csv
