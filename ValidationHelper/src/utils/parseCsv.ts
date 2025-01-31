@@ -9,7 +9,7 @@ export class FileData {
   static fileName: string;
 
   static getFileName(): string {
-    return this.fileName;
+    return this.fileName.split('.')[0];
   }
 
   static setFileName(name: string): void {
