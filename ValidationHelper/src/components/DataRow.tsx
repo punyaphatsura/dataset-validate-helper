@@ -16,7 +16,7 @@ interface DataRowProps {
     englishText: string,
     isChanged: boolean
   ) => void;
-  status: 'Read' | 'Write';
+  status: 'Read' | 'Write' | 'Search';
   setStatus: (status: 'Write' | 'Read') => void;
   editHistory?: EditHistory;
 }
@@ -37,7 +37,6 @@ const DataRow: FC<DataRowProps> = ({
   const [currentEnglishText, setCurrentEnglishText] = useState<string>('');
 
   useEffect(() => {
-    console.log('editHistory', editHistory);
     if (editHistory) {
       setCurrentThaiText(editHistory.editedThai);
       setCurrentEnglishText(editHistory.editedEnglish);
@@ -49,7 +48,7 @@ const DataRow: FC<DataRowProps> = ({
 
   useEffect(() => {
     const handleKeyEnter = (e: KeyboardEvent) => {
-      if (status === 'Read') return;
+      if (status !== 'Write') return;
       if (e.key === 'Enter') handleEditDone();
     };
 
@@ -65,8 +64,6 @@ const DataRow: FC<DataRowProps> = ({
       : englishTrim.endsWith('.')
         ? englishTrim
         : englishTrim + '.';
-    console.log('thaiTrim', thaiTrim);
-    console.log('englishFormatted', englishFormatted);
     setCurrentEnglishText(englishFormatted);
     setCurrentThaiText(thaiTrim);
     onEditDone(
@@ -97,29 +94,43 @@ const DataRow: FC<DataRowProps> = ({
     thaiText &&
     englishText && (
       <div className="space-y-6">
-        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div
+          className={`overflow-hidden rounded-xl border border-gray-200 shadow-sm transition-all ${status === 'Search' ? 'cursor-not-allowed opacity-50' : status === 'Read' ? 'bg-white' : 'border-2 border-blue-700'}`}>
           <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-6 py-4">
             <div className="flex items-center gap-2">
               <div className="rounded-md bg-blue-100 px-3 py-1 text-sm font-medium text-blue-700">
                 Row {rowNumber}
               </div>
-              <div className="text-sm text-gray-500">
-                {status === 'Write' ? 'Edit Mode' : 'Review Mode'}
-              </div>
+              <div className="text-sm text-gray-500"></div>
             </div>
-            {status === 'Read' && (
+            {status === 'Read' ? (
               <div className="flex items-center gap-3 text-sm text-gray-500">
                 <KeyboardShortcut label="Space" description="OK" />
                 <KeyboardShortcut label="W" description="Weird" />
                 <KeyboardShortcut label="→" description="Skip" />
                 {canGoBack && <KeyboardShortcut label="←" description="Back" />}
+                <KeyboardShortcut label="Enter" description="Switch mode" />
               </div>
+            ) : (
+              status === 'Write' && (
+                <div className="flex items-center gap-3 text-sm text-gray-500">
+                  <KeyboardShortcut label="Enter" description="Submit edit" />
+                </div>
+              )
             )}
           </div>
 
           <div
             className="space-y-4 p-6"
             onClick={() => status === 'Read' && setStatus('Write')}>
+            <div className="flex items-center gap-2 text-sm font-medium text-gray-500">
+              {status === 'Write' && (
+                <>
+                  <Edit2 className="h-4 w-4 text-blue-500" />
+                  <span className="text-blue-500">Edit Mode</span>
+                </>
+              )}
+            </div>
             <LanguageSection
               label="Thai"
               originalText={thaiText}
@@ -159,19 +170,18 @@ const LanguageSection: FC<{
   label: string;
   originalText: string;
   currentText: string;
-  status: 'Read' | 'Write';
+  status: 'Read' | 'Write' | 'Search';
   onChange: (value: string) => void;
 }> = ({ label, originalText, currentText, status, onChange }) => (
   <div className="space-y-2">
     <div className="flex items-center gap-2">
-      <span className="font-medium text-gray-700">{label}</span>
-      {status === 'Write' && <Edit2 className="h-4 w-4 text-gray-400" />}
+      <span className="select-none font-medium text-gray-700">{label}</span>
     </div>
-    {status === 'Read' ? (
+    {status === 'Search' || status === 'Read' ? (
       <div className="rounded-lg bg-gray-50 p-4 text-lg">{currentText}</div>
     ) : (
       <div className="space-y-2">
-        <div className="text-sm text-gray-500">Original text:</div>
+        <div className="select-none text-sm text-gray-500">Original text:</div>
         <div className="flex items-center justify-between rounded-lg bg-gray-100 p-3 text-gray-600">
           {originalText}
           <button
@@ -196,7 +206,7 @@ const KeyboardShortcut: FC<{ label: string; description: string }> = ({
   label,
   description,
 }) => (
-  <div className="flex items-center gap-1">
+  <div className="flex select-none items-center gap-1">
     <kbd className="rounded border border-gray-200 bg-white px-2 py-1 text-xs font-medium shadow-sm">
       {label}
     </kbd>

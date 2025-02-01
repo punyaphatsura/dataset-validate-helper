@@ -1,10 +1,10 @@
 'use client';
-import { useState, useEffect, FC } from 'react';
+import { useState, useEffect, FC, useRef } from 'react';
 import { DataRowType, FileData, parseCsvFile } from '@/utils/parseCsv';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Upload, Check, X, SkipForward, History } from 'lucide-react';
+import { Upload, Check, X, SkipForward, History, Search } from 'lucide-react';
 import FileUploadButton from '@/components/FileUploadButton';
 import DataRow from '@/components/DataRow';
 import {
@@ -13,6 +13,7 @@ import {
   ValidationStats,
 } from '@/types/validation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
 
 const Home: FC = () => {
   const [data, setData] = useState<DataRowType[]>([]);
@@ -27,7 +28,35 @@ const Home: FC = () => {
   const [history, setHistory] = useState<ValidationHistory[]>([]);
   const [editHistory, setEditHistory] = useState<EditHistory[]>([]);
   const [isInit, setIsInit] = useState<boolean>(true);
-  const [status, setStatus] = useState<'Write' | 'Read'>('Read');
+  const [status, setStatus] = useState<'Write' | 'Read' | 'Search'>('Read');
+  const [searchString, setSearchString] = useState<string>('');
+  const [lastSearchString, setLastSearchString] = useState<string>('');
+  const [searchData, setSearchData] = useState<
+    (DataRowType & { rowIndex: number })[]
+  >([]);
+
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const handleOutSideClick = (event: MouseEvent) => {
+      if (!inputRef.current || !event.target) {
+        if (status === 'Search') setStatus('Read');
+        return;
+      }
+      if (
+        !inputRef.current.contains(event.target as Node) &&
+        status === 'Search'
+      ) {
+        setStatus('Read');
+      }
+    };
+
+    window.addEventListener('mousedown', handleOutSideClick);
+
+    return () => {
+      window.removeEventListener('mousedown', handleOutSideClick);
+    };
+  }, [inputRef, status]);
 
   useEffect(() => {
     if (data.length === 0) return;
@@ -74,7 +103,7 @@ const Home: FC = () => {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (status === 'Write') return;
+      if (status !== 'Read') return;
       if (e.key === ' ') {
         e.preventDefault();
         handleMark('ok', 'forward');
@@ -174,6 +203,21 @@ const Home: FC = () => {
     }
   };
 
+  const handleSearch = () => {
+    setSearchData(
+      searchString !== ''
+        ? data
+            .map((d, idx) => ({ ...d, rowIndex: idx }))
+            .filter(
+              (d) =>
+                d['thai sentence'].includes(searchString) ||
+                d['english sentence'].includes(searchString)
+            )
+        : []
+    );
+    setLastSearchString(searchString);
+  };
+
   const downloadProgress = () => {
     const savedProgress = localStorage.getItem(
       `validationProgress-${FileData.getFileName()}`
@@ -244,7 +288,6 @@ const Home: FC = () => {
       !isChanged &&
       editHistory.find((eh) => eh.rowIndex === currentRow)
     ) {
-      console.log('removing', currentRow);
       setEditHistory((prev) => {
         const filtered = prev.filter((edit) => edit.rowIndex !== currentRow);
         return filtered;
@@ -316,7 +359,7 @@ const Home: FC = () => {
                   </div>
                   <Progress value={progress} className="w-full" />
 
-                  <div className="mt-4 grid grid-cols-3 gap-4">
+                  {/* <div className="mt-4 grid grid-cols-3 gap-4">
                     <div className="flex items-center gap-2 text-green-600">
                       <Check className="h-4 w-4" />
                       Ok: {stats.ok}
@@ -329,7 +372,7 @@ const Home: FC = () => {
                       <SkipForward className="h-4 w-4" />
                       Skipped: {stats.skip}
                     </div>
-                  </div>
+                  </div> */}
                 </div>
               </>
             )}
@@ -366,12 +409,133 @@ const Home: FC = () => {
         </CardContent>
       </Card>
       {data.length > 0 && (
-        <Tabs defaultValue="skip" className="mx-auto mt-8 max-w-3xl">
+        <Tabs defaultValue="search" className="mx-auto mt-8 max-w-3xl">
           <TabsList>
-            <TabsTrigger value="skip">Skip</TabsTrigger>
-            <TabsTrigger value="wried">Wried</TabsTrigger>
-            <TabsTrigger value="edit">Edit</TabsTrigger>
+            <TabsTrigger value="search">Search</TabsTrigger>
+            <TabsTrigger value="skip">
+              <div className="flex items-center gap-1">
+                Skip
+                <div className="flex h-6 min-w-6 items-center justify-center rounded-full bg-orange-100 px-2 text-orange-700">
+                  {history.filter((entry) => entry.mark === 'skip').length}
+                </div>
+              </div>
+            </TabsTrigger>
+            <TabsTrigger value="wried">
+              <div className="flex items-center gap-1">
+                Wried
+                <div className="flex h-6 min-w-6 items-center justify-center rounded-full bg-red-100 px-2 text-red-700">
+                  {history.filter((entry) => entry.mark === 'weird').length}
+                </div>
+              </div>
+            </TabsTrigger>
+            <TabsTrigger value="ok">
+              <div className="flex items-center gap-1">
+                Ok
+                <div className="flex h-6 min-w-6 items-center justify-center rounded-full bg-green-100 px-2 text-green-700">
+                  {history.filter((entry) => entry.mark === 'ok').length}
+                </div>
+              </div>
+            </TabsTrigger>
+            <TabsTrigger value="edit">
+              <div className="flex items-center gap-1">
+                Edited
+                <div className="flex h-6 min-w-6 items-center justify-center rounded-full bg-blue-100 px-2 text-blue-700">
+                  {editHistory.length}
+                </div>
+              </div>
+            </TabsTrigger>
           </TabsList>
+          <TabsContent value="search">
+            <Card className="mx-auto max-w-3xl">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Search className="h-5 w-5 text-green-600" />
+                  <span>Search</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  <div className="flex items-center rounded-md border border-solid">
+                    <Search className="ml-2 h-5 w-5 text-zinc-400" />
+                    <Input
+                      ref={inputRef}
+                      className="flex-1 border-none pl-2 shadow-none"
+                      placeholder="Search here"
+                      value={searchString}
+                      onFocus={() => setStatus('Search')}
+                      onBlur={() => setStatus('Read')}
+                      onChange={(e) => {
+                        setSearchString(e.target.value.trim());
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSearch();
+                      }}
+                    />
+                    <button
+                      onClick={handleSearch}
+                      className="mr-2 rounded-md px-3 py-1 text-sm font-bold text-green-600 transition-colors hover:bg-green-100">
+                      Search
+                    </button>
+                  </div>
+                  {lastSearchString !== '' && (
+                    <div className="mt-4 text-center text-lg font-semibold text-gray-700">
+                      Search Results for:{' '}
+                      <span className="text-green-600">{lastSearchString}</span>
+                    </div>
+                  )}
+                  {lastSearchString !== '' && (
+                    <div className="text-sm font-medium text-gray-600">
+                      {searchData.length > 0
+                        ? `${searchData.length} Row${searchData.length > 1 ? 's' : ''} Found`
+                        : 'No data found'}
+                    </div>
+                  )}
+                  {searchData.map((entry) => (
+                    <div
+                      key={entry.rowIndex}
+                      className="rounded-lg border border-gray-100 bg-white p-6 shadow-sm transition-all hover:shadow-md">
+                      <div className="mb-4 flex items-center justify-between">
+                        <span className="select-none rounded-md bg-green-100 px-3 py-1 text-sm font-medium text-green-700">
+                          Row {entry.rowIndex + 1}
+                        </span>
+                      </div>
+
+                      {/* Content container */}
+                      <div className="rounded-lg bg-gray-50 p-4">
+                        {/* Thai text section */}
+                        <div className="mb-4">
+                          <div className="mb-2 select-none font-medium text-gray-700">
+                            Thai Text
+                          </div>
+                          <div className="rounded border border-gray-200 bg-white p-3">
+                            {data && data[entry.rowIndex] && (
+                              <span className="text-gray-800">
+                                {data[entry.rowIndex]['thai sentence']}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* English text section */}
+                        <div>
+                          <div className="mb-2 select-none font-medium text-gray-700">
+                            English Text
+                          </div>
+                          <div className="rounded border border-gray-200 bg-white p-3">
+                            {data && data[entry.rowIndex] && (
+                              <span className="text-gray-800">
+                                {data[entry.rowIndex]['english sentence']}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
           <TabsContent value="skip">
             <Card className="mx-auto max-w-3xl">
               <CardHeader>
@@ -382,88 +546,98 @@ const Home: FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
-                  {history
-                    .filter((entry) => entry.mark === 'skip')
-                    .map((entry) => (
-                      <div
-                        key={entry.rowIndex}
-                        className="rounded-lg border border-gray-100 bg-white p-6 shadow-sm transition-all hover:shadow-md">
-                        <div className="mb-4 flex items-center justify-between">
-                          <span className="rounded-md bg-orange-100 px-3 py-1 text-sm font-medium text-orange-700">
-                            Row {entry.rowIndex + 1}
-                          </span>
-                        </div>
-
-                        {/* Content container */}
-                        <div className="rounded-lg bg-gray-50 p-4">
-                          {/* Thai text section */}
-                          <div className="mb-4">
-                            <div className="mb-2 font-medium text-gray-700">
-                              Thai Text
-                            </div>
-                            <div className="rounded border border-gray-200 bg-white p-3">
-                              {data && data[entry.rowIndex] && (
-                                <span className="text-gray-800">
-                                  {data[entry.rowIndex]['thai sentence']}
-                                </span>
-                              )}
-                            </div>
+                  {history.filter((entry) => entry.mark === 'skip').length >
+                  0 ? (
+                    history
+                      .filter((entry) => entry.mark === 'skip')
+                      .map((entry) => (
+                        <div
+                          key={entry.rowIndex}
+                          className="rounded-lg border border-gray-100 bg-white p-6 shadow-sm transition-all hover:shadow-md">
+                          <div className="mb-4 flex items-center justify-between">
+                            <span className="select-none rounded-md bg-orange-100 px-3 py-1 text-sm font-medium text-orange-700">
+                              Row {entry.rowIndex + 1}
+                            </span>
                           </div>
 
-                          {/* English text section */}
-                          <div>
-                            <div className="mb-2 font-medium text-gray-700">
-                              English Text
+                          {/* Content container */}
+                          <div className="rounded-lg bg-gray-50 p-4">
+                            {/* Thai text section */}
+                            <div className="mb-4">
+                              <div className="mb-2 select-none font-medium text-gray-700">
+                                Thai Text
+                              </div>
+                              <div className="rounded border border-gray-200 bg-white p-3">
+                                {data && data[entry.rowIndex] && (
+                                  <span className="text-gray-800">
+                                    {data[entry.rowIndex]['thai sentence']}
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                            <div className="rounded border border-gray-200 bg-white p-3">
-                              {data && data[entry.rowIndex] && (
-                                <span className="text-gray-800">
-                                  {data[entry.rowIndex]['english sentence']}
-                                </span>
-                              )}
+
+                            {/* English text section */}
+                            <div>
+                              <div className="mb-2 select-none font-medium text-gray-700">
+                                English Text
+                              </div>
+                              <div className="rounded border border-gray-200 bg-white p-3">
+                                {data && data[entry.rowIndex] && (
+                                  <span className="text-gray-800">
+                                    {data[entry.rowIndex]['english sentence']}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
+                          <div className="mt-4 flex justify-end gap-4">
+                            <button
+                              onClick={() => {
+                                setStats((prev) => ({
+                                  ...prev,
+                                  weird: prev.weird + 1,
+                                  skip: prev.skip - 1,
+                                }));
+                                setHistory((prev) =>
+                                  prev.map((h) =>
+                                    h.rowIndex === entry.rowIndex
+                                      ? { ...h, mark: 'weird' }
+                                      : h
+                                  )
+                                );
+                              }}
+                              className="min-w-32 select-none rounded-md bg-red-100 px-3 py-2 text-sm font-semibold text-red-700 transition-colors hover:bg-red-200">
+                              Mark as Weird
+                            </button>
+                            <button
+                              onClick={() => {
+                                setStats((prev) => ({
+                                  ...prev,
+                                  ok: prev.ok + 1,
+                                  skip: prev.skip - 1,
+                                }));
+                                setHistory((prev) =>
+                                  prev.map((h) =>
+                                    h.rowIndex === entry.rowIndex
+                                      ? { ...h, mark: 'ok' }
+                                      : h
+                                  )
+                                );
+                              }}
+                              className="min-w-32 select-none rounded-md bg-green-100 px-3 py-2 text-sm font-semibold text-green-700 transition-colors hover:bg-green-200">
+                              Mark as Ok
+                            </button>
+                          </div>
                         </div>
-                        <div className="mt-4 flex justify-end gap-4">
-                          <button
-                            onClick={() => {
-                              setStats((prev) => ({
-                                ...prev,
-                                weird: prev.weird + 1,
-                                skip: prev.skip - 1,
-                              }));
-                              setHistory((prev) =>
-                                prev.map((h) =>
-                                  h.rowIndex === entry.rowIndex
-                                    ? { ...h, mark: 'weird' }
-                                    : h
-                                )
-                              );
-                            }}
-                            className="min-w-32 rounded-md bg-red-100 px-3 py-2 text-sm font-semibold text-red-700 transition-colors hover:bg-red-200">
-                            Mark as Weird
-                          </button>
-                          <button
-                            onClick={() => {
-                              setStats((prev) => ({
-                                ...prev,
-                                ok: prev.ok + 1,
-                                skip: prev.skip - 1,
-                              }));
-                              setHistory((prev) =>
-                                prev.map((h) =>
-                                  h.rowIndex === entry.rowIndex
-                                    ? { ...h, mark: 'ok' }
-                                    : h
-                                )
-                              );
-                            }}
-                            className="min-w-32 rounded-md bg-green-100 px-3 py-2 text-sm font-semibold text-green-700 transition-colors hover:bg-green-200">
-                            Mark as Ok
-                          </button>
-                        </div>
+                      ))
+                  ) : (
+                    <div className="flex flex-col items-center gap-6 rounded-lg border border-zinc-200 bg-zinc-50 p-8">
+                      <div className="flex items-center gap-2 font-medium text-zinc-700">
+                        <X className="h-6 w-6 text-red-600" />
+                        No skipped data
                       </div>
-                    ))}
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -478,50 +652,167 @@ const Home: FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
-                  {history
-                    .filter((entry) => entry.mark === 'weird')
-                    .map((entry) => (
-                      <div
-                        key={entry.rowIndex}
-                        className="rounded-lg border border-gray-100 bg-white p-6 shadow-sm transition-all hover:shadow-md">
-                        <div className="mb-4 flex items-center justify-between">
-                          <span className="rounded-md bg-red-100 px-3 py-1 text-sm font-medium text-red-700">
-                            Row {entry.rowIndex + 1}
-                          </span>
-                        </div>
-
-                        {/* Content container */}
-                        <div className="rounded-lg bg-gray-50 p-4">
-                          {/* Thai text section */}
-                          <div className="mb-4">
-                            <div className="mb-2 font-medium text-gray-700">
-                              Thai Text
-                            </div>
-                            <div className="rounded border border-gray-200 bg-white p-3">
-                              {data && data[entry.rowIndex] && (
-                                <span className="text-gray-800">
-                                  {data[entry.rowIndex]['thai sentence']}
-                                </span>
-                              )}
-                            </div>
+                  {history.filter((entry) => entry.mark === 'weird').length >
+                  0 ? (
+                    history
+                      .filter((entry) => entry.mark === 'weird')
+                      .map((entry) => (
+                        <div
+                          key={entry.rowIndex}
+                          className="rounded-lg border border-gray-100 bg-white p-6 shadow-sm transition-all hover:shadow-md">
+                          <div className="mb-4 flex items-center justify-between">
+                            <span className="select-none rounded-md bg-red-100 px-3 py-1 text-sm font-medium text-red-700">
+                              Row {entry.rowIndex + 1}
+                            </span>
                           </div>
 
-                          {/* English text section */}
-                          <div>
-                            <div className="mb-2 font-medium text-gray-700">
-                              English Text
+                          {/* Content container */}
+                          <div className="rounded-lg bg-gray-50 p-4">
+                            {/* Thai text section */}
+                            <div className="mb-4">
+                              <div className="mb-2 select-none font-medium text-gray-700">
+                                Thai Text
+                              </div>
+                              <div className="rounded border border-gray-200 bg-white p-3">
+                                {data && data[entry.rowIndex] && (
+                                  <span className="text-gray-800">
+                                    {data[entry.rowIndex]['thai sentence']}
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                            <div className="rounded border border-gray-200 bg-white p-3">
-                              {data && data[entry.rowIndex] && (
-                                <span className="text-gray-800">
-                                  {data[entry.rowIndex]['english sentence']}
-                                </span>
-                              )}
+
+                            {/* English text section */}
+                            <div>
+                              <div className="mb-2 select-none font-medium text-gray-700">
+                                English Text
+                              </div>
+                              <div className="rounded border border-gray-200 bg-white p-3">
+                                {data && data[entry.rowIndex] && (
+                                  <span className="text-gray-800">
+                                    {data[entry.rowIndex]['english sentence']}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
+                          <div className="mt-4 flex justify-end gap-4">
+                            <button
+                              onClick={() => {
+                                setStats((prev) => ({
+                                  ...prev,
+                                  ok: prev.ok + 1,
+                                  skip: prev.skip - 1,
+                                }));
+                                setHistory((prev) =>
+                                  prev.map((h) =>
+                                    h.rowIndex === entry.rowIndex
+                                      ? { ...h, mark: 'ok' }
+                                      : h
+                                  )
+                                );
+                              }}
+                              className="min-w-32 select-none rounded-md bg-green-100 px-3 py-2 text-sm font-semibold text-green-700 transition-colors hover:bg-green-200">
+                              Mark as Ok
+                            </button>
+                          </div>
                         </div>
+                      ))
+                  ) : (
+                    <div className="flex flex-col items-center gap-6 rounded-lg border border-zinc-200 bg-zinc-50 p-8">
+                      <div className="flex items-center gap-2 font-medium text-zinc-700">
+                        <X className="h-6 w-6 text-red-600" />
+                        No wried data
                       </div>
-                    ))}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="ok">
+            <Card className="mx-auto max-w-3xl">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Check className="h-6 w-6 text-green-600" />
+                  <span>Approved Data</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  {history.filter((entry) => entry.mark === 'ok').length > 0 ? (
+                    history
+                      .filter((entry) => entry.mark === 'ok')
+                      .map((entry) => (
+                        <div
+                          key={entry.rowIndex}
+                          className="rounded-lg border border-gray-100 bg-white p-6 shadow-sm transition-all hover:shadow-md">
+                          <div className="mb-4 flex items-center justify-between">
+                            <span className="select-none rounded-md bg-green-100 px-3 py-1 text-sm font-medium text-green-700">
+                              Row {entry.rowIndex + 1}
+                            </span>
+                          </div>
+
+                          {/* Content container */}
+                          <div className="rounded-lg bg-gray-50 p-4">
+                            {/* Thai text section */}
+                            <div className="mb-4">
+                              <div className="mb-2 select-none font-medium text-gray-700">
+                                Thai Text
+                              </div>
+                              <div className="rounded border border-gray-200 bg-white p-3">
+                                {data && data[entry.rowIndex] && (
+                                  <span className="text-gray-800">
+                                    {data[entry.rowIndex]['thai sentence']}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* English text section */}
+                            <div>
+                              <div className="mb-2 select-none font-medium text-gray-700">
+                                English Text
+                              </div>
+                              <div className="rounded border border-gray-200 bg-white p-3">
+                                {data && data[entry.rowIndex] && (
+                                  <span className="text-gray-800">
+                                    {data[entry.rowIndex]['english sentence']}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="mt-4 flex justify-end gap-4">
+                            <button
+                              onClick={() => {
+                                setStats((prev) => ({
+                                  ...prev,
+                                  weird: prev.weird + 1,
+                                  skip: prev.skip - 1,
+                                }));
+                                setHistory((prev) =>
+                                  prev.map((h) =>
+                                    h.rowIndex === entry.rowIndex
+                                      ? { ...h, mark: 'weird' }
+                                      : h
+                                  )
+                                );
+                              }}
+                              className="min-w-32 select-none rounded-md bg-red-100 px-3 py-2 text-sm font-semibold text-red-700 transition-colors hover:bg-red-200">
+                              Mark as Weird
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                  ) : (
+                    <div className="flex flex-col items-center gap-6 rounded-lg border border-zinc-200 bg-zinc-50 p-8">
+                      <div className="flex items-center gap-2 font-medium text-zinc-700">
+                        <X className="h-6 w-6 text-red-600" />
+                        No approved data
+                      </div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -536,69 +827,78 @@ const Home: FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
-                  {editHistory.map((edit) => (
-                    <div
-                      key={`${edit.rowIndex}`}
-                      className="rounded-lg border border-gray-100 bg-white p-6 shadow-sm transition-all hover:shadow-md">
-                      <div className="mb-4 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="rounded-md bg-blue-100 px-3 py-1 text-sm font-medium text-blue-700">
-                            Row {edit.rowIndex + 1}
-                          </span>
+                  {editHistory.length > 0 ? (
+                    editHistory.map((edit) => (
+                      <div
+                        key={`${edit.rowIndex}`}
+                        className="rounded-lg border border-gray-100 bg-white p-6 shadow-sm transition-all hover:shadow-md">
+                        <div className="mb-4 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="select-none rounded-md bg-blue-100 px-3 py-1 text-sm font-medium text-blue-700">
+                              Row {edit.rowIndex + 1}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Thai Section */}
+                        <div className="mb-6 rounded-lg bg-gray-50 p-4">
+                          <div className="mb-3 select-none font-medium text-gray-700">
+                            Thai Text
+                          </div>
+                          <div className="space-y-3">
+                            <div className="flex flex-col gap-2">
+                              <div className="text-sm font-medium text-gray-500">
+                                Original
+                              </div>
+                              <div className="rounded border border-gray-200 bg-white p-2">
+                                {edit.originalThai}
+                              </div>
+                            </div>
+                            <div className="flex flex-col gap-2">
+                              <div className="text-sm font-medium text-gray-500">
+                                Edited
+                              </div>
+                              <div className="rounded border border-blue-100 bg-blue-50 p-2 text-blue-900">
+                                {edit.editedThai}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* English Section */}
+                        <div className="rounded-lg bg-gray-50 p-4">
+                          <div className="mb-3 select-none font-medium text-gray-700">
+                            English Text
+                          </div>
+                          <div className="space-y-3">
+                            <div className="flex flex-col gap-2">
+                              <div className="text-sm font-medium text-gray-500">
+                                Original
+                              </div>
+                              <div className="rounded border border-gray-200 bg-white p-2">
+                                {edit.originalEnglish}
+                              </div>
+                            </div>
+                            <div className="flex flex-col gap-2">
+                              <div className="text-sm font-medium text-gray-500">
+                                Edited
+                              </div>
+                              <div className="rounded border border-blue-100 bg-blue-50 p-2 text-blue-900">
+                                {edit.editedEnglish}
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </div>
-
-                      {/* Thai Section */}
-                      <div className="mb-6 rounded-lg bg-gray-50 p-4">
-                        <div className="mb-3 font-medium text-gray-700">
-                          Thai Text
-                        </div>
-                        <div className="space-y-3">
-                          <div className="flex flex-col gap-2">
-                            <div className="text-sm font-medium text-gray-500">
-                              Original
-                            </div>
-                            <div className="rounded border border-gray-200 bg-white p-2">
-                              {edit.originalThai}
-                            </div>
-                          </div>
-                          <div className="flex flex-col gap-2">
-                            <div className="text-sm font-medium text-gray-500">
-                              Edited
-                            </div>
-                            <div className="rounded border border-blue-100 bg-blue-50 p-2 text-blue-900">
-                              {edit.editedThai}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* English Section */}
-                      <div className="rounded-lg bg-gray-50 p-4">
-                        <div className="mb-3 font-medium text-gray-700">
-                          English Text
-                        </div>
-                        <div className="space-y-3">
-                          <div className="flex flex-col gap-2">
-                            <div className="text-sm font-medium text-gray-500">
-                              Original
-                            </div>
-                            <div className="rounded border border-gray-200 bg-white p-2">
-                              {edit.originalEnglish}
-                            </div>
-                          </div>
-                          <div className="flex flex-col gap-2">
-                            <div className="text-sm font-medium text-gray-500">
-                              Edited
-                            </div>
-                            <div className="rounded border border-blue-100 bg-blue-50 p-2 text-blue-900">
-                              {edit.editedEnglish}
-                            </div>
-                          </div>
-                        </div>
+                    ))
+                  ) : (
+                    <div className="flex flex-col items-center gap-6 rounded-lg border border-zinc-200 bg-zinc-50 p-8">
+                      <div className="flex items-center gap-2 font-medium text-zinc-700">
+                        <X className="h-6 w-6 text-red-600" />
+                        No edited data
                       </div>
                     </div>
-                  ))}
+                  )}
                 </div>
               </CardContent>
             </Card>
