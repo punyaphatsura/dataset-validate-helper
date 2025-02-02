@@ -33,23 +33,22 @@ const FileUploadButton: FC<FileUploadButtonProps> = ({
   };
 
   return (
-    <div className='relative flex items-center gap-x-2'>
+    <div className="relative flex items-center gap-x-2">
       <input
         ref={fileInputRef}
         id={id}
-        type='file'
+        type="file"
         accept={accept}
         onChange={handleChange}
-        className='hidden'
+        className="hidden"
       />
       <button
         onClick={handleClick}
-        className='text-sm px-4 py-2 bg-blue-50 text-blue-700 rounded-md 
-                   hover:bg-blue-100 transition-colors font-semibold'>
+        className="rounded-md bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 transition-colors hover:bg-blue-100">
         {buttonText}
       </button>
       {showFileName && fileName && (
-        <div className='text-sm text-gray-600 break-all'>{fileName}</div>
+        <div className="break-all text-sm text-gray-600">{fileName}</div>
       )}
     </div>
   );
