@@ -59,11 +59,12 @@ const DataRow: FC<DataRowProps> = ({
   const handleEditDone = () => {
     const thaiTrim = currentThaiText.trim();
     const englishTrim = currentEnglishText.trim();
-    const englishFormatted = englishTrim.endsWith('?')
-      ? englishTrim
-      : englishTrim.endsWith('.')
+    const englishFormatted =
+      englishTrim.endsWith('?') || englishTrim.endsWith('!')
         ? englishTrim
-        : englishTrim + '.';
+        : englishTrim.endsWith('.')
+          ? englishTrim
+          : englishTrim + '.';
     setCurrentEnglishText(englishFormatted);
     setCurrentThaiText(thaiTrim);
     onEditDone(
@@ -93,10 +94,18 @@ const DataRow: FC<DataRowProps> = ({
   return (
     thaiText &&
     englishText && (
-      <div className="space-y-6">
+      <div
+        className={`space-y-6 transition-all duration-300 ease-out ${status === 'Search' ? 'max-h-0' : 'max-h-[2000px]'}`}>
         <div
-          className={`overflow-hidden rounded-xl border border-gray-200 shadow-sm transition-all ${status === 'Search' ? 'cursor-not-allowed opacity-50' : status === 'Read' ? 'bg-white' : 'border-2 border-blue-700'}`}>
-          <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-6 py-4">
+          className={`overflow-hidden rounded-xl shadow-sm transition-all duration-300 ease-out ${status === 'Read' && 'border border-gray-200'} ${
+            status === 'Search'
+              ? 'max-h-0 cursor-not-allowed'
+              : status === 'Read'
+                ? 'max-h-[2000px] bg-white opacity-100'
+                : 'max-h-[2000px] border-2 border-solid border-blue-700 opacity-100'
+          }`}>
+          <div
+            className={`flex items-center justify-between border-b border-gray-100 bg-gray-50 px-6 py-4 transition-all duration-300 ease-out ${status === 'Search' ? 'max-h-0' : 'max-h-[2000px]'}`}>
             <div className="flex items-center gap-2">
               <div className="rounded-md bg-blue-100 px-3 py-1 text-sm font-medium text-blue-700">
                 Row {rowNumber}
@@ -180,22 +189,22 @@ const LanguageSection: FC<{
     {status === 'Search' || status === 'Read' ? (
       <div className="rounded-lg bg-gray-50 p-4 text-lg">{currentText}</div>
     ) : (
-      <div className="space-y-2">
+      <div className="space-y-2 transition-all duration-300 ease-out">
         <div className="select-none text-sm text-gray-500">Original text:</div>
-        <div className="flex items-center justify-between rounded-lg bg-gray-100 p-3 text-gray-600">
+        <div className="flex items-center justify-between rounded-lg bg-gray-100 p-3 text-gray-600 transition-all duration-300 ease-out">
           {originalText}
           <button
             onClick={() => {
               onChange(originalText);
             }}
-            className="ml-2 rounded-full bg-blue-50 p-1 text-gray-500 transition-all duration-300 hover:rotate-[-360deg] hover:bg-blue-100">
+            className="ml-2 rounded-full bg-blue-50 p-1 text-gray-500 transition-all duration-300 ease-out hover:rotate-[-360deg] hover:bg-blue-100">
             <RotateCcw color="rgb(29 78 216)" size={18} />
           </button>
         </div>
         <TextArea
           value={currentText}
           onChange={(e) => onChange(e.target.value)}
-          className="min-h-[100px] w-full rounded-lg border-gray-200 p-3 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+          className="min-h-[100px] w-full rounded-lg border-gray-200 p-3 transition-all duration-300 ease-out focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
         />
       </div>
     )}
