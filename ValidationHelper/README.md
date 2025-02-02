@@ -99,6 +99,8 @@ Dataset Validation Helper is a tool designed to assist users in validating datas
 ### Data status overview
 
 ![alt text](public/screenshots/image9.png)
+![alt text](public/screenshots/image4.png)
+![alt text](public/screenshots/image14.png)
 
 ### Edit Data Overview
 
